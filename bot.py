@@ -7,7 +7,7 @@ import re
 #                     BOT TOKEN
 # =========================================================
 
-BOT_TOKEN = "PASTE_YOUR_BOT_TOKEN"
+BOT_TOKEN = "8496595814:AAGribEBb_Uoba0f6p8tw2Lz8WES5uOziB0"
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
