@@ -25,7 +25,7 @@ from telegram.ext import (
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 # YOUR API URL
-API_URL = "https://aniketbramha.om-divine.workers.dev/?key=lundlo&num="
+API_URL = "https://aniketbramha.om-divine.workers.dev"
 
 ADMIN_ID = 8351165824
 
