@@ -32,7 +32,7 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 API_KEY = os.getenv("API_KEY")
 
 # YOUR API
-API_URL = "https://numinfo.eu.cc/api/check"
+API_URL = "https://aniketbramha.om-divine.workers.dev/"
 
 # ADMIN ID
 ADMIN_ID = 8351165824
