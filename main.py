@@ -23,7 +23,7 @@ from telegram.ext import (
 # =========================================================
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-API_KEY = os.getenv("API_KEY")
+API_KEY = os.getenv("https://aniketbramha.om-divine.workers.dev/?key=lundlo&num=7906614904")
 
 API_URL = "https://numinfo.eu.cc/api/check"
 
