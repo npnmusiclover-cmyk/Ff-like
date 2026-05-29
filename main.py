@@ -11,6 +11,8 @@ from telegram import (
     InlineKeyboardMarkup
 )
 
+from telegram.constants import ParseMode
+
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -24,12 +26,10 @@ from telegram.ext import (
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
+# API
+API_URL = "https://aniketbramha.om-divine.workers.dev"
+
 ADMIN_ID = 8351165824
-
-# FULL API
-API_URL = "https://aniketbramha.om-divine.workers.dev/?key=lundlo&num="
-
-API_KEY = "lundlo"
 
 # CHANNELS
 CHANNEL_1_ID = "@joinforfree110"
@@ -46,7 +46,6 @@ CHANNEL_2_NAME = "PLUS OFFICIAL"
 
 USERS_FILE = "users.json"
 BANNED_FILE = "banned.json"
-PROTECTED_FILE = "protected.json"
 HISTORY_FILE = "history.json"
 
 # =========================================================
@@ -67,7 +66,6 @@ logger = logging.getLogger(__name__)
 DEFAULT_FILES = {
     USERS_FILE: {},
     BANNED_FILE: [],
-    PROTECTED_FILE: [],
     HISTORY_FILE: {}
 }
 
@@ -105,30 +103,17 @@ def save_json(file, data):
 def load_users():
     return load_json(USERS_FILE, {})
 
-
 def save_users(data):
     save_json(USERS_FILE, data)
-
 
 def load_banned():
     return load_json(BANNED_FILE, [])
 
-
 def save_banned(data):
     save_json(BANNED_FILE, data)
 
-
-def load_protected():
-    return load_json(PROTECTED_FILE, [])
-
-
-def save_protected(data):
-    save_json(PROTECTED_FILE, data)
-
-
 def load_history():
     return load_json(HISTORY_FILE, {})
-
 
 def save_history(data):
     save_json(HISTORY_FILE, data)
@@ -139,7 +124,6 @@ def save_history(data):
 
 def is_admin(user_id):
     return int(user_id) == ADMIN_ID
-
 
 def is_banned(user_id):
 
@@ -214,7 +198,6 @@ async def is_member(bot, user_id, channel):
     except:
         return False
 
-
 def join_keyboard():
 
     return InlineKeyboardMarkup([
@@ -238,7 +221,6 @@ def join_keyboard():
         ]
     ])
 
-
 async def check_join(update, context):
 
     user_id = update.effective_user.id
@@ -249,6 +231,7 @@ async def check_join(update, context):
     if is_banned(user_id):
 
         if update.message:
+
             await update.message.reply_text(
                 "🚫 YOU ARE BANNED FROM USING THIS BOT"
             )
@@ -281,6 +264,7 @@ async def check_join(update, context):
     )
 
     if update.message:
+
         await update.message.reply_text(
             text,
             reply_markup=join_keyboard()
@@ -375,11 +359,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🔹 `/start` - Start Bot\n"
         "🔹 `/help` - Help Menu\n"
         "🔹 `/num <number>` - Search Number\n"
-        "🔹 `/stats` - Admin Stats\n"
-        "🔹 `/users` - All Users\n"
-        "🔹 `/bcast` - Broadcast Message\n"
-        "🔹 `/ban` - Ban User\n"
-        "🔹 `/unban` - Unban User\n\n"
+        "🔹 `/stats` - Bot Stats (Admin)\n"
+        "🔹 `/users` - User List (Admin)\n"
+        "🔹 `/bcast` - Broadcast (Admin)\n\n"
         "📌 *EXAMPLE:*\n"
         "`/num 9876543210`\n\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -395,9 +377,19 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🚀 *POWERED BY PLUS OFFICIAL*"
     )
 
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(
+                "🚀 POWERED BY PLUS OFFICIAL",
+                url="https://t.me/plus_official01"
+            )
+        ]
+    ])
+
     await update.message.reply_text(
         text,
-        parse_mode="Markdown"
+        parse_mode=ParseMode.MARKDOWN,
+        reply_markup=keyboard
     )
 
 # =========================================================
@@ -407,15 +399,21 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def help_command(update, context):
 
     text = (
-        "📚 AVAILABLE COMMANDS\n\n"
-        "/start - START BOT\n"
-        "/help - HELP MENU\n"
-        "/num <number> - SEARCH NUMBER\n\n"
-        "📲 EXAMPLE:\n"
-        "/num 9876543210"
+        "📚 *AVAILABLE COMMANDS*\n\n"
+        "🔹 `/start`\n"
+        "🔹 `/help`\n"
+        "🔹 `/num 9876543210`\n"
+        "🔹 `/stats`\n"
+        "🔹 `/users`\n"
+        "🔹 `/bcast message`\n"
+        "🔹 `/ban user_id`\n"
+        "🔹 `/unban user_id`"
     )
 
-    await update.message.reply_text(text)
+    await update.message.reply_text(
+        text,
+        parse_mode=ParseMode.MARKDOWN
+    )
 
 # =========================================================
 # NUMBER SEARCH
@@ -433,7 +431,8 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
 
         await update.message.reply_text(
-            "❌ USE:\n/num 9876543210"
+            "❌ USE:\n`/num 9876543210`",
+            parse_mode=ParseMode.MARKDOWN
         )
 
         return
@@ -456,7 +455,7 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
 
-        url = f"{API_URL}/?key={API_KEY}&num={number}"
+        url = f"{https://aniketbramha.om-divine.workers.dev}/?key=lundlo&num={number}"
 
         async with httpx.AsyncClient(timeout=30) as client:
 
@@ -465,22 +464,12 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if response.status_code != 200:
 
                 await msg.edit_text(
-                    f"❌ API ERROR\nSTATUS: {response.status_code}"
+                    f"❌ API ERROR\nSTATUS CODE: {response.status_code}"
                 )
 
                 return
 
-            raw_text = response.text.strip()
-
-            print(raw_text)
-
-            try:
-                data = response.json()
-            except:
-                await msg.edit_text(
-                    f"❌ INVALID API RESPONSE\n\n{raw_text[:500]}"
-                )
-                return
+            data = response.json()
 
     except Exception as e:
 
@@ -490,51 +479,60 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         return
 
+    # API RETURNS LIST
+    if not isinstance(data, list):
+
+        await msg.edit_text(
+            "❌ INVALID API RESPONSE"
+        )
+
+        return
+
+    if len(data) == 0:
+
+        await msg.edit_text(
+            "❌ NO VALID DATA FOUND"
+        )
+
+        return
+
     text = (
-        "🔥 PREMIUM SEARCH RESULT 🔥\n\n"
-        f"📱 NUMBER: {number}\n\n"
+        "🔥 *PREMIUM SEARCH RESULT* 🔥\n\n"
+        f"📱 *SEARCH NUMBER:* `{number}`\n"
+        f"📊 *TOTAL RESULTS:* `{len(data)}`\n\n"
     )
 
-    # ==========================================
-    # DIRECT RESULT SHOW
-    # ==========================================
+    for i, item in enumerate(data, start=1):
 
-    if isinstance(data, dict):
+        name = item.get("NAME", "N/A")
+        fname = item.get("fname", "N/A")
+        address = item.get("ADDRESS", "N/A")
+        circle = item.get("circle", "N/A")
+        mobile = item.get("MOBILE", "N/A")
+        alt = item.get("alt", "N/A")
+        id_num = item.get("id", "N/A")
+        email = item.get("email", "N/A")
 
-        for key, value in data.items():
-
-            if isinstance(value, dict):
-
-                text += (
-                    "━━━━━━━━━━━━━━━━━━━\n"
-                    f"📌 RESULT\n\n"
-                    f"👤 NAME: {value.get('name', 'N/A')}\n"
-                    f"👨 FATHER: {value.get('father name', 'N/A')}\n"
-                    f"📱 MOBILE: {value.get('mobile', 'N/A')}\n"
-                    f"📞 ALT: {value.get('alternative mobile', 'N/A')}\n"
-                    f"📡 SIM: {value.get('circle/sim', 'N/A')}\n"
-                    f"🏠 ADDRESS: {value.get('address', 'N/A')}\n"
-                    f"🪪 ID: {value.get('id number', 'N/A')}\n"
-                    f"📧 EMAIL: {value.get('mail', 'N/A')}\n\n"
-                )
-
-        # IF API RETURNS NORMAL JSON
-        if text.strip() == f"🔥 PREMIUM SEARCH RESULT 🔥\n\n📱 NUMBER: {number}":
-
-            text += "━━━━━━━━━━━━━━━━━━━\n"
-
-            for key, value in data.items():
-
-                text += f"🔹 {key} : {value}\n"
-
-    else:
-
-        text += "❌ NO VALID DATA FOUND"
+        text += (
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"📌 *RESULT #{i}*\n\n"
+            f"👤 *NAME:* `{name}`\n\n"
+            f"👨 *FATHER NAME:* `{fname}`\n\n"
+            f"📱 *MOBILE:* `{mobile}`\n\n"
+            f"📞 *ALT NUMBER:* `{alt}`\n\n"
+            f"📡 *SIM/CIRCLE:* `{circle}`\n\n"
+            f"🏠 *ADDRESS:*\n`{address}`\n\n"
+            f"🪪 *ID:* `{id_num}`\n\n"
+            f"📧 *EMAIL:* `{email}`\n\n"
+        )
 
     if len(text) > 4000:
         text = text[:4000]
 
-    await msg.edit_text(text)
+    await msg.edit_text(
+        text,
+        parse_mode=ParseMode.MARKDOWN
+    )
 
 # =========================================================
 # USERS
@@ -619,15 +617,29 @@ async def ban(update, context):
     if not is_admin(update.effective_user.id):
         return
 
+    if not context.args:
+
+        await update.message.reply_text(
+            "USE:\n/ban USER_ID"
+        )
+
+        return
+
     uid = context.args[0]
 
     banned = load_banned()
 
-    if uid not in banned:
+    if uid in banned:
 
-        banned.append(uid)
+        await update.message.reply_text(
+            "USER ALREADY BANNED"
+        )
 
-        save_banned(banned)
+        return
+
+    banned.append(uid)
+
+    save_banned(banned)
 
     await update.message.reply_text(
         f"🚫 USER BANNED:\n{uid}"
@@ -642,15 +654,29 @@ async def unban(update, context):
     if not is_admin(update.effective_user.id):
         return
 
+    if not context.args:
+
+        await update.message.reply_text(
+            "USE:\n/unban USER_ID"
+        )
+
+        return
+
     uid = context.args[0]
 
     banned = load_banned()
 
-    if uid in banned:
+    if uid not in banned:
 
-        banned.remove(uid)
+        await update.message.reply_text(
+            "USER NOT BANNED"
+        )
 
-        save_banned(banned)
+        return
+
+    banned.remove(uid)
+
+    save_banned(banned)
 
     await update.message.reply_text(
         f"✅ USER UNBANNED:\n{uid}"
