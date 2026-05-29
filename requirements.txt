@@ -1,2 +1,5 @@
 pyTelegramBotAPI
 requests
+httpx
+httpcore
+python-telegram-bot
