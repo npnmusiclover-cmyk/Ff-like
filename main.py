@@ -1,7 +1,6 @@
 import os
 import json
 import logging
-import httpx
 from datetime import datetime
 
 from telegram import (
