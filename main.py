@@ -27,9 +27,9 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = 8351165824
 
 # FULL API
-API_URL = "https://aniketbramha.om-divine.workers.dev/"
+API_URL = "https://aniketbramha.om-divine.workers.dev/key="
 
-API_KEY = "key=lundlo&num="
+API_KEY = "lundlo&num="
 
 # CHANNELS
 CHANNEL_1_ID = "@joinforfree110"
