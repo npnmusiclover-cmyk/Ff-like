@@ -455,7 +455,7 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
 
-        url = f"{https://aniketbramha.om-divine.workers.dev}/?key=lundlo&num={number}"
+        url = f"https://aniketbramha.om-divine.workers.dev}/?key=lundlo&num{number}"
 
         async with httpx.AsyncClient(timeout=30) as client:
 
