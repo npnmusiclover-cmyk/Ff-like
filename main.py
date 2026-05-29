@@ -27,7 +27,7 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 # RAILWAY VARIABLES
 # Railway -> Variables -> Add:
 # API_KEY = lundlo
-API_KEY = os.getenv("API_KEY")
+API_KEY = os.getenv("https://aniketbramha.om-divine.workers.dev/?key=lundlo&num="")
 
 # YOUR API
 API_URL = "https://aniketbramha.om-divine.workers.dev/?key=lundlo&num="
