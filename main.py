@@ -489,21 +489,23 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     print("API RESPONSE =", data)
-    import json
+
+import json
 
 print(
-    json.dumps(
-        data,
-        indent=2,
-        ensure_ascii=False
-    )
+json.dumps(
+    data,
+    indent=2,
+    ensure_ascii=False
+)
+)
 )
 
-    # =====================================================
-    # VALUE GETTER
-    # =====================================================
+# =====================================================
+# VALUE GETTER
+# =====================================================
 
-    def get_value(obj, keys):
+def get_value(obj, keys):
 
         if not isinstance(obj, dict):
             return "N/A"
