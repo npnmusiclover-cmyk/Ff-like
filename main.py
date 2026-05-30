@@ -669,25 +669,18 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             f"👤 FULL NAME\n"
             f"➥ {name}\n\n"
-
             f"👨 FATHER NAME\n"
             f"➥ {father}\n\n"
-
             f"📞 MOBILE NUMBER\n"
             f"➥ {mobile}\n\n"
-
             f"☎️ ALTERNATIVE NUMBER\n"
             f"➥ {alt}\n\n"
-
             f"📡 SIM / CIRCLE INFO\n"
             f"➥ {sim}\n\n"
-
             f"🏠 ADDRESS DETAILS\n"
             f"➥ {address}\n\n"
-
             f"🪪 ID NUMBER\n"
             f"➥ {idnum}\n\n"
-
             f"📧 EMAIL ADDRESS\n"
             f"➥ {email}\n\n"
 
