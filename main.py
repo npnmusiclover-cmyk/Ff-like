@@ -506,32 +506,31 @@ json.dumps(
 
 def get_value(obj, keys):
 
-        if not isinstance(obj, dict):
-            return "N/A"
-
-        for search_key in keys:
-
-            for k, v in obj.items():
-
-                key = str(k).lower().strip()
-
-                if search_key.lower() == key:
-
-                    if v is None:
-                        return "N/A"
-
-                    if str(v).strip() == "":
-                        return "N/A"
-
-                    return str(v)
-
+    if not isinstance(obj, dict):
         return "N/A"
 
-    # =====================================================
-    # FIND RESULT
-    # =====================================================
+    for search_key in keys:
 
-    result = None
+        for k, v in obj.items():
+
+            key = str(k).lower().strip()
+
+            if search_key.lower() == key:
+
+                if v is None:
+                    return "N/A"
+
+                if str(v).strip() == "":
+                    return "N/A"
+
+                return str(v)
+
+    return "N/A"
+    # =====================================================
+# FIND RESULT
+# =====================================================
+
+result = None
 
 if isinstance(data, list):
 
@@ -544,31 +543,33 @@ if isinstance(data, list):
 
 elif isinstance(data, dict):
 
-        if any(
-            str(k).lower() in [
-                "name",
-                "fullname",
-                "mobile",
-                "phone",
-                "father",
-                "father name",
-                "address",
-                "email",
-                "mail"
-            ]
-            for k in data.keys()
-        ):
+    if any(
+        str(k).lower() in [
+            "name",
+            "fullname",
+            "full name",
+            "mobile",
+            "phone",
+            "number",
+            "father",
+            "father name",
+            "address",
+            "email",
+            "mail"
+        ]
+        for k in data.keys()
+    ):
 
-            result = data
+        result = data
 
-        else:
+    else:
 
-            for k, v in data.items():
+        for k, v in data.items():
 
-                if isinstance(v, dict):
+            if isinstance(v, dict):
 
-                    result = v
-                    break
+                result = v
+                break
 
     # =====================================================
     # NO DATA FOUND
