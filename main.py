@@ -35,8 +35,8 @@ ADMIN_ID = 8351165824
 API_URL = "https://aniketbramha.om-divine.workers.dev/?key=lundlo&num="
 
 # CHANNELS
-CHANNEL_1_ID = "@joinforfree110"
-CHANNEL_1_LINK = "https://t.me/joinforfree110"
+CHANNEL_1_ID = "@cineinfo1"
+CHANNEL_1_LINK = "https://t.me/cineinfo1"
 CHANNEL_1_NAME = "PLUS PRO"
 
 CHANNEL_2_ID = "@plus_official01"
