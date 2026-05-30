@@ -592,41 +592,33 @@ elif isinstance(data, dict):
 ):
 
     text = (
-        "╔══════════════════════════╗\n"
-        "       ❌ SEARCH FAILED\n"
-        "╚══════════════════════════╝\n\n"
-
+        "━━━━━━━━━━━━━━━\n"
+        "❌ SEARCH FAILED\n"
+        "━━━━━━━━━━━━━━━\n\n"
         f"📱 NUMBER : {number}\n\n"
-
-        "━━━━━━━━━━━━━━━━━━━━\n\n"
-
+        "━━━━━━━━━━━━━━━\n\n"
         "⚠️ NUMBER DETAILS NOT FOUND\n\n"
-
         "❌ DATA NOT AVAILABLE IN DATABASE\n"
         "❌ NO RECORDS FOUND\n\n"
-
         "💡 POSSIBLE REASONS:\n"
         "• Number not available\n"
         "• Database record missing\n"
         "• Recently activated number\n\n"
-
         "🔎 TRY ANOTHER NUMBER\n\n"
-
-        "━━━━━━━━━━━━━━━━━━━━\n\n"
-
+        "━━━━━━━━━━━━━━━\n\n"
         "🔥 PLUS OFFICIAL PREMIUM SYSTEM 🔥"
     )
 
-    else:
+else:
 
-        name = get_value(
-            result,
-            [
-                "name",
-                "fullname",
-                "full name"
-            ]
-        )
+    name = get_value(
+        result,
+        [
+            "name",
+            "fullname",
+            "full name"
+        ]
+    )
 
         father = get_value(
             result,
