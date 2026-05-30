@@ -431,7 +431,7 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
 
         await update.message.reply_text(
-            "❌ USE:\n/num 9876543210"
+            "❌ USE LIKE THIS✅:\n/num 9876543210"
         )
 
         return
