@@ -391,7 +391,8 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     try:
-        url = f"{API_URL}/?key={API_KEY}&num={number}"
+        # API CALL
+        url = f"{API_URL}{number}"
 
         async with httpx.AsyncClient(timeout=30) as client:
             response = await client.get(url)
@@ -403,14 +404,16 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return
 
             raw_text = response.text.strip()
-            print(raw_text)
+
+            # CHECKING FOR "invalid" RESPONSE
+            if raw_text.lower() == "invalid" or not raw_text:
+                await msg.edit_text("⚠️ This Number Details Not Found in Database!")
+                return
 
             try:
                 data = response.json()
             except:
-                await msg.edit_text(
-                    f"❌ INVALID API RESPONSE\n\n{raw_text[:500]}"
-                )
+                await msg.edit_text("⚠️ This Number Details Not Found in Database!")
                 return
 
     except Exception as e:
@@ -419,12 +422,12 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # DATA CHECK LOGic - AGAR DATA NAHI MILA TO
+    # DATA CHECK
     if not data:
         await msg.edit_text("⚠️ This Number Details Not Found in Database!")
         return
 
-    # RESULT FORMAT
+    # RESULT FORMAT (Jaise tumne bola)
     text = (
         "🔥 PREMIUM SEARCH RESULT 🔥\n\n"
         f"📱 NUMBER: {number}\n\n"
@@ -432,14 +435,13 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     found_data = False
 
-    # LOGIC TO CHECK DATA AND FORMAT
     if isinstance(data, dict):
-        # Check if data has actual content or is just empty/error
         if len(data) > 0:
             text += "━━━━━━━━━━━━━━━━━━━━━━━\n"
             for key, value in data.items():
                 if isinstance(value, dict):
                     found_data = True
+                    # YE WALA FORMAT TUMNE MANGA THA
                     text += (
                         "📌 RESULT\n\n"
                         f"👤 NAME: {value.get('name', 'N/A')}\n"
@@ -453,11 +455,13 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         "━━━━━━━━━━━━━━━━━━━━━━━\n"
                     )
                 else:
-                    # Normal JSON format
+                    # AGAR NORMAL JSON HAI TO YE FORMAT
                     found_data = True
-                    text += f"🔹 {key} : {value}\n"
+                    # KEY ko thoda accha naam dene ka try
+                    nice_key = key.replace('_', ' ').title()
+                    text += f"🔹 {nice_key} : {value}\n"
         
-        # If loop ran but no real data was added
+        # Agar data khali mila
         if not found_data and len(data) == 0:
              text = "⚠️ This Number Details Not Found in Database!"
 
@@ -654,3 +658,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+```
