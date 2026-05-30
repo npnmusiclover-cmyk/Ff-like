@@ -489,6 +489,15 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     print("API RESPONSE =", data)
+    import json
+
+print(
+    json.dumps(
+        data,
+        indent=2,
+        ensure_ascii=False
+    )
+)
 
     # =====================================================
     # VALUE GETTER
@@ -564,27 +573,47 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # NO DATA FOUND
     # =====================================================
 
-    if not result:
-
-        text = (
-            "╔══════════════════════════╗\n"
-            "        ❌ NO RESULT FOUND\n"
-            "╚══════════════════════════╝\n\n"
-
-            f"📱 SEARCHED NUMBER\n"
-            f"➥ {number}\n\n"
-
-            "━━━━━━━━━━━━━━━━━━━━\n\n"
-
-            "⚠️ THIS NUMBER DETAILS NOT FOUND\n\n"
-
-            "📡 DATABASE RESPONSE EMPTY\n"
-            "🔍 TRY ANOTHER NUMBER\n\n"
-
-            "━━━━━━━━━━━━━━━━━━━━\n\n"
-
-            "🔥 POWERED BY PLUS OFFICIAL 🔥"
+    if (
+    not result
+    or (
+        isinstance(result, dict)
+        and all(
+            str(v).strip().lower() in [
+                "",
+                "n/a",
+                "none",
+                "null"
+            ]
+            for v in result.values()
         )
+    )
+):
+
+    text = (
+        "╔══════════════════════════╗\n"
+        "       ❌ SEARCH FAILED\n"
+        "╚══════════════════════════╝\n\n"
+
+        f"📱 NUMBER : {number}\n\n"
+
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+
+        "⚠️ NUMBER DETAILS NOT FOUND\n\n"
+
+        "❌ DATA NOT AVAILABLE IN DATABASE\n"
+        "❌ NO RECORDS FOUND\n\n"
+
+        "💡 POSSIBLE REASONS:\n"
+        "• Number not available\n"
+        "• Database record missing\n"
+        "• Recently activated number\n\n"
+
+        "🔎 TRY ANOTHER NUMBER\n\n"
+
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+
+        "🔥 PLUS OFFICIAL PREMIUM SYSTEM 🔥"
+    )
 
     else:
 
@@ -658,46 +687,32 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
         text = (
-            "╔══════════════════════════╗\n"
-            "       🔥 PREMIUM RESULT 🔥\n"
-            "╚══════════════════════════╝\n\n"
+    "╔══════════════════════════╗\n"
+    "      🔥 PREMIUM RESULT 🔥\n"
+    "╚══════════════════════════╝\n\n"
 
-            f"📱 SEARCHED NUMBER\n"
-            f"➥ {number}\n\n"
+    f"📱 TARGET NUMBER\n"
+    f"➤ {number}\n\n"
 
-            "━━━━━━━━━━━━━━━━━━━━\n\n"
+    "━━━━━━━━━━━━━━━━━━━━\n\n"
 
-            f"👤 FULL NAME\n"
-            f"➥ {name}\n\n"
+    f"👤 NAME\n➤ {name}\n\n"
+    f"👨 FATHER NAME\n➤ {father}\n\n"
+    f"📞 MOBILE\n➤ {mobile}\n\n"
+    f"☎️ ALTERNATE\n➤ {alt}\n\n"
+    f"📡 SIM INFO\n➤ {sim}\n\n"
+    f"🏠 ADDRESS\n➤ {address}\n\n"
+    f"🪪 ID NUMBER\n➤ {idnum}\n\n"
+    f"📧 EMAIL\n➤ {email}\n\n"
 
-            f"👨 FATHER NAME\n"
-            f"➥ {father}\n\n"
+    "━━━━━━━━━━━━━━━━━━━━\n\n"
 
-            f"📞 MOBILE NUMBER\n"
-            f"➥ {mobile}\n\n"
+    "✅ DATABASE STATUS : VERIFIED\n"
+    "⚡ SEARCH STATUS : SUCCESS\n"
+    "🚀 PREMIUM ACCESS ACTIVE\n\n"
 
-            f"☎️ ALTERNATIVE NUMBER\n"
-            f"➥ {alt}\n\n"
-
-            f"📡 SIM / CIRCLE INFO\n"
-            f"➥ {sim}\n\n"
-
-            f"🏠 ADDRESS DETAILS\n"
-            f"➥ {address}\n\n"
-
-            f"🪪 ID NUMBER\n"
-            f"➥ {idnum}\n\n"
-
-            f"📧 EMAIL ADDRESS\n"
-            f"➥ {email}\n\n"
-
-            "━━━━━━━━━━━━━━━━━━━━\n\n"
-
-            "⚡ DATABASE STATUS : ACTIVE\n"
-            "🚀 SEARCH COMPLETED SUCCESSFULLY\n\n"
-
-            "🔥 POWERED BY PLUS OFFICIAL 🔥"
-        )
+    "🔥 POWERED BY PLUS OFFICIAL 🔥"
+)
 
     keyboard = InlineKeyboardMarkup([
         [
