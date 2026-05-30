@@ -533,16 +533,16 @@ def get_value(obj, keys):
 
     result = None
 
-    if isinstance(data, list):
+if isinstance(data, list):
 
-        for item in data:
+    for item in data:
 
-            if isinstance(item, dict):
+        if isinstance(item, dict):
 
-                result = item
-                break
+            result = item
+            break
 
-    elif isinstance(data, dict):
+elif isinstance(data, dict):
 
         if any(
             str(k).lower() in [
