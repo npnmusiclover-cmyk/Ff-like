@@ -499,7 +499,6 @@ json.dumps(
     ensure_ascii=False
 )
 )
-)
 
 # =====================================================
 # VALUE GETTER
