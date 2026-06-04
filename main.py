@@ -472,13 +472,23 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
                 data = response.json()
 
-            except Exception as e:
+            except Exception:
 
-                await msg.edit_text(
-                    f"⚠️ THIS NUMBER DETAILS NOT FOUND\n\n{e}"
-                )
+    await msg.edit_text(
+        "╔══════════════════════════╗\n"
+        "        ❌ NO RESULT FOUND\n"
+        "╚══════════════════════════╝\n\n"
+        f"📱 SEARCHED NUMBER\n"
+        f"➥ {number}\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        "⚠️ THIS NUMBER DETAILS NOT FOUND\n\n"
+        "📡 DATABASE RESPONSE EMPTY\n"
+        "🔍 TRY ANOTHER NUMBER\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        "🔥 POWERED BY PLUS OFFICIAL 🔥"
+    )
 
-                return
+    return
 
     except Exception as e:
 
