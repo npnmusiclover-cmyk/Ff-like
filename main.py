@@ -475,7 +475,7 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except Exception as e:
 
                 await msg.edit_text(
-                    f"❌ NO DATA FOUND TRY OTHER NUMBER\n\n{e}"
+                    f"⚠️ THIS NUMBER DETAILS NOT FOUND\n\n"
                 )
 
                 return
