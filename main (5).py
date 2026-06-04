@@ -452,41 +452,50 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🔍 SEARCHING PREMIUM DATABASE..."
     )
 
-    try:
+    NO_RESULT_TEXT = (
+    "╔══════════════════════════╗\n"
+    "        ❌ NO RESULT FOUND\n"
+    "╚══════════════════════════╝\n\n"
 
-        url = f"{API_URL}{number}"
+    f"📱 SEARCHED NUMBER\n"
+    f"➥ {number}\n\n"
 
-        async with httpx.AsyncClient(timeout=30) as client:
+    "━━━━━━━━━━━━━━━━━━━━\n\n"
 
-            response = await client.get(url)
+    "⚠️ THIS NUMBER DETAILS NOT FOUND\n\n"
 
-            if response.status_code != 200:
+    "📡 DATABASE RESPONSE EMPTY\n"
+    "🔍 TRY ANOTHER NUMBER\n\n"
 
-                await msg.edit_text(
-                    f"❌ API ERROR\nSTATUS: {response.status_code}"
-                )
+    "━━━━━━━━━━━━━━━━━━━━\n\n"
 
-                return
+    "🔥 POWERED BY PLUS OFFICIAL 🔥"
+)
 
-            try:
+try:
 
-                data = response.json()
+    url = f"{API_URL}{number}"
 
-            except Exception as e:
+    async with httpx.AsyncClient(timeout=30) as client:
+        response = await client.get(url)
 
-                await msg.edit_text(
-                    f"❌ NO DATA FOUND TRY OTHER NUMBER\n\n{e}"
-                )
-
-                return
-
-    except Exception as e:
-
-        await msg.edit_text(
-            f"❌ ERROR:\n{e}"
-        )
-
+    if response.status_code != 200:
+        await msg.edit_text(NO_RESULT_TEXT)
         return
+
+    try:
+        data = response.json()
+    except Exception:
+        await msg.edit_text(NO_RESULT_TEXT)
+        return
+
+    if not data:
+        await msg.edit_text(NO_RESULT_TEXT)
+        return
+
+except Exception:
+    await msg.edit_text(NO_RESULT_TEXT)
+    return
 
     print("API RESPONSE =", data)
 
