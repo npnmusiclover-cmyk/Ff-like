@@ -466,7 +466,7 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f"❌ API ERROR\nSTATUS: {response.status_code}"
                 )
 
-                return
+               return
 
             try:
 
@@ -475,7 +475,24 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except Exception as e:
 
                 await msg.edit_text(
-                    f"❌ NO DATA FOUND TRY OTHER NUMBER\n\n{e}"
+                    f""╔══════════════════════════╗\n"
+            "        ❌ NO RESULT FOUND\n"
+            "╚══════════════════════════╝\n\n"
+
+            f"📱 SEARCHED NUMBER\n"
+            f"➥ {number}\n\n"
+
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+
+            "⚠️ THIS NUMBER DETAILS NOT FOUND\n\n"
+
+            "📡 DATABASE RESPONSE EMPTY\n"
+            "🔍 TRY ANOTHER NUMBER\n\n"
+
+            "━━━━━━━━━━━━━━━━━━━━\n\n"
+
+            "🔥 POWERED BY PLUS OFFICIAL 🔥"
+        )\n\n{e}"
                 )
 
                 return
