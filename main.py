@@ -469,6 +469,7 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return
 
             try:
+                
     data = response.json()
 
 except Exception:
