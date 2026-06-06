@@ -32,7 +32,7 @@ print("BOT TOKEN =>", BOT_TOKEN)
 ADMIN_ID = 8351165824
 
 # API
-API_URL = "https://aniketbramha.om-divine.workers.dev/?key=lundlo&num="
+API_URL = "https://numapis.beastaccuserrr.workers.dev/?apikey=PAPAKIAPI&number=
 
 # CHANNELS
 CHANNEL_1_ID = "@cineinfo1"
