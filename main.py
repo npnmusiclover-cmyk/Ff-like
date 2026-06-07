@@ -3,7 +3,6 @@ import json
 import logging
 import httpx
 import asyncio
-
 from datetime import datetime
 
 from telegram import (
@@ -11,9 +10,7 @@ from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup
 )
-
 from telegram.constants import ParseMode
-
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -22,366 +19,257 @@ from telegram.ext import (
 )
 
 # =========================================================
-# CONFIG
+# ⚙️ CONFIGURATION
 # =========================================================
-
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
-print("BOT TOKEN =>", BOT_TOKEN)
+ADMIN_ID = 8351165824 
 
-ADMIN_ID = 8351165824
+# API ENDPOINTS
+NUM_API = "https://numapis.beastaccuserrr.workers.dev/?apikey=PAPAKIAPI&number="
+GST_API = "https://rohit-gst-api-q9p1.onrender.com/gst?number="
+RC_API = "https://rc-info-1api.onrender.com/api/vehicle-info?rc="
 
-# API URL
-API_URL = "https://numapis.beastaccuserrr.workers.dev/?apikey=PAPAKIAPI&number="
-
-# CHANNELS
-CHANNEL_1_ID = "@cineinfo1"
-CHANNEL_1_LINK = "https://t.me/cineinfo1"
-CHANNEL_1_NAME = "PLUS PRO"
-
-CHANNEL_2_ID = "@plus_official01"
-CHANNEL_2_LINK = "https://t.me/plus_official01"
-CHANNEL_2_NAME = "PLUS OFFICIAL"
-
-# =========================================================
-# FILES
-# =========================================================
+CHANNELS = [
+    {"id": "@cineinfo1", "name": "⭐ PLUS PRO", "link": "https://t.me/cineinfo1"},
+    {"id": "@plus_official01", "name": "🔥 PLUS OFFICIAL", "link": "https://t.me/plus_official01"}
+]
 
 USERS_FILE = "users.json"
-BANNED_FILE = "banned.json"
-HISTORY_FILE = "history.json"
+SETTINGS_FILE = "settings.json"
 
 # =========================================================
-# LOGGING
+# 🛠️ DATABASE & SETTINGS
 # =========================================================
-
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO
-)
-
-logger = logging.getLogger(__name__)
-
-# =========================================================
-# CREATE FILES
-# =========================================================
-
-DEFAULT_FILES = {
-    USERS_FILE: {},
-    BANNED_FILE: [],
-    HISTORY_FILE: {}
-}
-
-for file, default in DEFAULT_FILES.items():
-    if not os.path.exists(file):
-        with open(file, "w") as f:
-            json.dump(default, f)
-
-# =========================================================
-# JSON HELPERS
-# =========================================================
-
 def load_json(file, default):
-    try:
-        with open(file, "r") as f:
-            return json.load(f)
-    except:
-        return default
+    if not os.path.exists(file):
+        with open(file, "w") as f: json.dump(default, f)
+    with open(file, "r") as f: return json.load(f)
 
 def save_json(file, data):
-    with open(file, "w") as f:
-        json.dump(data, f, indent=2)
+    with open(file, "w") as f: json.dump(data, f, indent=2)
+
+# Initial Settings
+default_settings = {"num": True, "gst": True, "rc": True}
+settings = load_json(SETTINGS_FILE, default_settings)
 
 # =========================================================
-# DATABASE
+# 🛡️ ACCESS CONTROL
 # =========================================================
+async def is_member(bot, user_id):
+    if user_id == ADMIN_ID: return True
+    for ch in CHANNELS:
+        try:
+            m = await bot.get_chat_member(ch["id"], user_id)
+            if m.status not in ["member", "administrator", "creator"]: return False
+        except: return False
+    return True
 
-def load_users():
-    return load_json(USERS_FILE, {})
+def get_join_kb():
+    btns = [[InlineKeyboardButton(ch["name"], url=ch["link"])] for ch in CHANNELS]
+    btns.append([InlineKeyboardButton("✅ VERIFY ACCESS", callback_data="verify")])
+    return InlineKeyboardMarkup(btns)
 
-def save_users(data):
-    save_json(USERS_FILE, data)
-
-def load_banned():
-    return load_json(BANNED_FILE, [])
-
-def save_banned(data):
-    save_json(BANNED_FILE, data)
-
-def load_history():
-    return load_json(HISTORY_FILE, {})
-
-def save_history(data):
-    save_json(HISTORY_FILE, data)
-
-# =========================================================
-# ADMIN
-# =========================================================
-
-def is_admin(user_id):
-    return int(user_id) == ADMIN_ID
-
-def is_banned(user_id):
-    banned = load_banned()
-    return str(user_id) in [str(x) for x in banned]
-
-# =========================================================
-# REGISTER USER
-# =========================================================
-
-def register_user(user):
-    users = load_users()
-    uid = str(user.id)
-    is_new = uid not in users
-    users[uid] = {
-        "id": user.id,
-        "name": user.first_name,
-        "username": user.username or "N/A",
-        "joined": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
-    save_users(users)
-    return is_new
-
-# =========================================================
-# SEARCH HISTORY
-# =========================================================
-
-def log_search(user_id, number):
-    history = load_history()
-    uid = str(user_id)
-    if uid not in history:
-        history[uid] = []
-    history[uid].append({
-        "number": number,
-        "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    })
-    history[uid] = history[uid][-20:]
-    save_history(history)
-
-# =========================================================
-# AUTO DELETE
-# =========================================================
-
-async def auto_delete_message(message, delay=60):
-    await asyncio.sleep(delay)
-    try:
-        await message.delete()
-    except:
-        pass
-
-# =========================================================
-# FORCE JOIN
-# =========================================================
-
-async def is_member(bot, user_id, channel):
-    try:
-        member = await bot.get_chat_member(channel, user_id)
-        return member.status in ["member", "administrator", "creator"]
-    except:
-        return False
-
-def join_keyboard():
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton(f"📢 {CHANNEL_1_NAME}", url=CHANNEL_1_LINK)],
-        [InlineKeyboardButton(f"📢 {CHANNEL_2_NAME}", url=CHANNEL_2_LINK)],
-        [InlineKeyboardButton("✅ VERIFY NOW", callback_data="verify")]
-    ])
-
-async def check_join(update, context):
-    user_id = update.effective_user.id
-    if is_admin(user_id):
-        return True
-    if is_banned(user_id):
-        await update.message.reply_text("🚫 YOU ARE BANNED FROM USING THIS BOT")
-        return False
-
-    bot = context.bot
-    joined1 = await is_member(bot, user_id, CHANNEL_1_ID)
-    joined2 = await is_member(bot, user_id, CHANNEL_2_ID)
-
-    if joined1 and joined2:
-        return True
-
-    text = (
-        "🔥 *PREMIUM ACCESS REQUIRED* 🔥\n\n"
-        "JOIN BOTH CHANNELS TO USE THIS BOT\n\n"
-        f"📢 {CHANNEL_1_NAME}\n"
-        f"📢 {CHANNEL_2_NAME}\n\n"
-        "AFTER JOIN CLICK VERIFY BUTTON"
-    )
-    await update.message.reply_text(text, reply_markup=join_keyboard())
-    return False
-
-# =========================================================
-# VERIFY
-# =========================================================
-
-async def verify(update, context):
-    query = update.callback_query
-    await query.answer()
-    user_id = query.from_user.id
-    bot = context.bot
-
-    joined1 = await is_member(bot, user_id, CHANNEL_1_ID)
-    joined2 = await is_member(bot, user_id, CHANNEL_2_ID)
-
-    if joined1 and joined2:
+async def check_service(update, service_key):
+    if not settings.get(service_key, True):
         text = (
-            "✅ VERIFIED SUCCESSFULLY\n\n"
-            "🔍 USE:\n"
-            "/num 9876543210\n\n"
-            "🚀 PREMIUM ACCESS ENABLED"
+            "⚠️ **SERVICE MAINTENANCE** ⚠️\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"Developer has temporarily disabled **{service_key.upper()} Search** for upgrades.\n\n"
+            "📢 Please check @plus_official01 for updates."
         )
-        await query.edit_message_text(text)
-    else:
-        await query.answer("❌ Please join both channels first!", show_alert=True)
+        await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
+        return False
+    return True
 
 # =========================================================
-# START
+# 📞 NUMBER SEARCH (CUSTOM FORMAT)
 # =========================================================
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not await check_join(update, context):
-        return
-    user = update.effective_user
-    register_user(user)
-
-    text = (
-        "🔥 *WELCOME TO PREMIUM NUMBER INFO BOT* 🔥\n\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "⚡ FAST & PREMIUM SEARCH\n"
-        "📡 LIVE DATABASE ACCESS\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        "📲 *COMMAND*\n"
-        "🔹 `/num 9876543210` - Search Number\n\n"
-        "🚀 *POWERED BY PLUS OFFICIAL*"
-    )
-    keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("🔥 PLUS OFFICIAL 🔥", url=CHANNEL_2_LINK)]])
-    await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=keyboard)
-
-# =========================================================
-# NUMBER SEARCH (FIXED FOR YOUR API RESPONSE)
-# =========================================================
-
-async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not await check_join(update, context):
-        return
-
-    user = update.effective_user
-    register_user(user)
+async def num_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await check_service(update, "num"): return
+    if not await is_member(context.bot, update.effective_user.id):
+        return await update.message.reply_text("❌ Join channels to search!", reply_markup=get_join_kb())
 
     if not context.args:
-        await update.message.reply_text("❌ USE LIKE THIS: `/num 9876543210`", parse_mode=ParseMode.MARKDOWN)
-        return
+        return await update.message.reply_text("💡 Usage: `/num 9876543210`", parse_mode=ParseMode.MARKDOWN)
 
-    number = context.args[0]
-    if not number.isdigit():
-        await update.message.reply_text("❌ INVALID NUMBER")
-        return
+    num = context.args[0]
+    m = await update.message.reply_text("🔍 `Searching Premium Database...`", parse_mode=ParseMode.MARKDOWN)
+    
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            r = await client.get(f"{NUM_API}{num}")
+            data = r.json()
 
-    log_search(user.id, number)
-    msg = await update.message.reply_text("🔍 SEARCHING PREMIUM DATABASE...")
+        if data.get("success") and data.get("result", {}).get("results"):
+            res = data["result"]["results"][0]
+            result_text = (
+                "💎 **PREMIUM SEARCH RESULT** 💎\n"
+                "━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"👤 **NAME:** `{res.get('name', 'N/A')}`\n"
+                f"👨 **FATHER:** `{res.get('father_name', 'N/A')}`\n"
+                f"📞 **PHONE:** `{res.get('mobile', num)}`\n"
+                f"☎️ **ALT NUM:** `{res.get('alternate_number', 'N/A')}`\n"
+                f"📡 **OPERATOR:** `{res.get('circle', 'N/A')}`\n"
+                f"🏠 **ADDRESS:** `{res.get('address', 'N/A')}`\n"
+                f"🪪 **ID/CNIC:** `{res.get('id_number', 'N/A')}`\n"
+                f"📧 **EMAIL:** `{res.get('email', 'N/A')}`\n"
+                "━━━━━━━━━━━━━━━━━━━━━━\n"
+                "⚡ **Status:** `Success`\n"
+                "🚀 **Powered by @plus_official01**"
+            )
+            kb = InlineKeyboardMarkup([[InlineKeyboardButton("🔥 PLUS OFFICIAL 🔥", url=CHANNELS[1]["link"])]])
+            await m.edit_text(result_text, parse_mode=ParseMode.MARKDOWN, reply_markup=kb)
+        else:
+            await m.edit_text("❌ **NO RECORD FOUND IN DATABASE**")
+    except: await m.edit_text("⚠️ **API SERVER DOWN**")
+
+# =========================================================
+# 🏢 GST SEARCH
+# =========================================================
+async def gst_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await check_service(update, "gst"): return
+    if not await is_member(context.bot, update.effective_user.id):
+        return await update.message.reply_text("❌ Join channels first!", reply_markup=get_join_kb())
+
+    if not context.args:
+        return await update.message.reply_text("💡 Usage: `/gst 19BOKPS7056D1ZI`", parse_mode=ParseMode.MARKDOWN)
+
+    gst_num = context.args[0].upper()
+    m = await update.message.reply_text("📡 `Querying GST Records...`", parse_mode=ParseMode.MARKDOWN)
 
     try:
-        url = f"{API_URL}{number}"
         async with httpx.AsyncClient(timeout=30) as client:
-            response = await client.get(url)
-            data = response.json()
-    except Exception as e:
-        await msg.edit_text(f"❌ ERROR: {e}")
-        return
+            r = await client.get(f"{GST_API}{gst_num}")
+            data = r.json()
 
-    # --- DATA PARSING LOGIC FOR YOUR API ---
-    result_data = None
-    if data.get("success") is True:
-        results_list = data.get("result", {}).get("results", [])
-        if results_list:
-            result_data = results_list[0] # Pehla result uthao
+        if data.get("success"):
+            biz = data["data"]["business_info"]
+            addr = data["data"]["address"]
+            result_text = (
+                "💎 **PREMIUM GST RESULT** 💎\n"
+                "━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"🏢 **TRADE:** `{biz.get('trade_name', 'N/A')}`\n"
+                f"⚖️ **LEGAL:** `{biz.get('legal_name', 'N/A')}`\n"
+                f"🔢 **GSTIN:** `{data['data'].get('gst_number')}`\n"
+                f"💳 **PAN:** `{data['data'].get('pan_number')}`\n"
+                f"🟢 **STATUS:** `{biz.get('status', 'N/A')}`\n"
+                f"📅 **REG DATE:** `{biz.get('registration_date', 'N/A')}`\n"
+                f"🏠 **ADDRESS:** `{addr.get('st')}, {addr.get('loc')}, {addr.get('dst')}, {addr.get('stcd')} - {addr.get('pncd')}`\n"
+                "━━━━━━━━━━━━━━━━━━━━━━\n"
+                "🚀 **Powered by @plus_official01**"
+            )
+            await m.edit_text(result_text, parse_mode=ParseMode.MARKDOWN)
+        else:
+            await m.edit_text("❌ **INVALID GST NUMBER**")
+    except: await m.edit_text("⚠️ **SERVER ERROR**")
 
-    if not result_data:
-        text = (
-            "╔══════════════════════════╗\n"
-            "        ❌ NO RESULT FOUND\n"
-            "╚══════════════════════════╝\n\n"
-            f"📱 SEARCHED NUMBER: {number}\n"
-            "⚠️ Details not found in database."
-        )
-    else:
-        # API Keys ke hisaab se data extract karna
-        name = result_data.get("name", "N/A")
-        father = result_data.get("father_name", "N/A")
-        mobile = result_data.get("mobile", "N/A")
-        alt = result_data.get("alternate_number", "N/A")
-        circle = result_data.get("circle", "N/A")
-        address = result_data.get("address", "N/A")
-        id_num = result_data.get("id_number", "N/A") # Agar API mein ho
-        email = result_data.get("email", "N/A")
+# =========================================================
+# 🚗 RC SEARCH
+# =========================================================
+async def rc_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await check_service(update, "rc"): return
+    if not await is_member(context.bot, update.effective_user.id):
+        return await update.message.reply_text("❌ Join channels first!", reply_markup=get_join_kb())
 
-        text = (
-            "╔══════════════════════════╗\n"
-            "       🔥 PREMIUM RESULT 🔥\n"
-            "╚══════════════════════════╝\n\n"
-            f"📱 *SEARCHED NUMBER*\n"
-            f"➥ `{number}`\n\n"
-            "━━━━━━━━━━━━━━━━━━━━\n\n"
-            f"👤 *FULL NAME*\n"
-            f"➥ `{name}`\n\n"
-            f"👨 *FATHER NAME*\n"
-            f"➥ `{father}`\n\n"
-            f"📞 *MOBILE NUMBER*\n"
-            f"➥ `{mobile}`\n\n"
-            f"☎️ *ALT NUMBER*\n"
-            f"➥ `{alt}`\n\n"
-            f"📡 *SIM / CIRCLE*\n"
-            f"➥ `{circle}`\n\n"
-            f"🏠 *ADDRESS*\n"
-            f"➥ `{address}`\n\n"
-            "━━━━━━━━━━━━━━━━━━━━\n\n"
-            "⚡ DATABASE STATUS : ACTIVE\n"
-            "🔥 POWERED BY PLUS OFFICIAL 🔥"
-        )
+    if not context.args:
+        return await update.message.reply_text("💡 Usage: `/rc MH12DE1433`", parse_mode=ParseMode.MARKDOWN)
 
-    keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("🔥 PLUS OFFICIAL 🔥", url=CHANNEL_2_LINK)]])
-    result_message = await msg.edit_text(text, parse_mode=ParseMode.MARKDOWN, reply_markup=keyboard)
+    rc_num = context.args[0].upper()
+    m = await update.message.reply_text("🏎️ `Extracting RTO Details...`", parse_mode=ParseMode.MARKDOWN)
+
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            r = await client.get(f"{RC_API}{rc_num}")
+            data = r.json()
+
+        if data.get("status") == "success":
+            basic = data["basic_info"]
+            veh = data["vehicle_details"]
+            result_text = (
+                "💎 **PREMIUM RC RESULT** 💎\n"
+                "━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"👤 **OWNER:** `{basic.get('owner_name')}`\n"
+                f"👨 **FATHER:** `{basic.get('fathers_name')}`\n"
+                f"🚘 **MODEL:** `{basic.get('model_name')}`\n"
+                f"🔢 **REG NO:** `{data.get('registration_number')}`\n"
+                f"⛽ **FUEL:** `{veh.get('fuel_type')}`\n"
+                f"⏳ **AGE:** `{data['validity'].get('vehicle_age')}`\n"
+                f"🛡️ **INSURANCE:** `{data['insurance'].get('status')}`\n"
+                f"📍 **RTO:** `{data['ownership_details'].get('rto')}`\n"
+                "━━━━━━━━━━━━━━━━━━━━━━\n"
+                "🚀 **Powered by @plus_official01**"
+            )
+            await m.edit_text(result_text, parse_mode=ParseMode.MARKDOWN)
+        else:
+            await m.edit_text("❌ **VEHICLE NOT FOUND**")
+    except: await m.edit_text("⚠️ **RC API ERROR**")
+
+# =========================================================
+# 🛠️ ADMIN MAINTENANCE COMMAND
+# =========================================================
+async def maintain(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID: return
+    if not context.args:
+        return await update.message.reply_text("Usage: `/maintain <num/gst/rc>`")
     
-    # Auto delete result after 60 seconds
-    asyncio.create_task(auto_delete_message(result_message, 60))
+    service = context.args[0].lower()
+    if service in settings:
+        settings[service] = not settings[service]
+        save_json(SETTINGS_FILE, settings)
+        status = "✅ ACTIVE" if settings[service] else "❌ MAINTENANCE"
+        await update.message.reply_text(f"Service **{service.upper()}** is now {status}", parse_mode=ParseMode.MARKDOWN)
+    else:
+        await update.message.reply_text("Invalid service. Use num, gst, or rc.")
 
 # =========================================================
-# ADMIN COMMANDS
+# 📂 SYSTEM HANDLERS
 # =========================================================
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    users = load_json(USERS_FILE, {})
+    users[str(user.id)] = {"name": user.first_name, "username": user.username}
+    save_json(USERS_FILE, users)
+    
+    if not await is_member(context.bot, user.id):
+        return await update.message.reply_text("⚠️ **ACCESS DENIED**\nJoin our channels to activate.", reply_markup=get_join_kb())
 
-async def stats(update, context):
-    if not is_admin(update.effective_user.id): return
-    users_count = len(load_users())
-    await update.message.reply_text(f"📊 *STATS*\nTotal Users: {users_count}")
+    welcome = (
+        f"👋 **Welcome, {user.first_name}!**\n\n"
+        f"🛡️ **PREMIUM OSINT BOT v3.0**\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"🚀 **Available Commands:**\n"
+        f"📞 `/num [number]` - Search Mobile Details\n"
+        f"🏢 `/gst [gstin]` - Search Business Details\n"
+        f"🚗 `/rc [vehicle_no]` - Search Vehicle Details\n\n"
+        f"📊 **My Status:** `Premium Member`\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"💎 **Powered by @plus_official01**"
+    )
+    await update.message.reply_text(welcome, parse_mode=ParseMode.MARKDOWN)
 
-async def bcast(update, context):
-    if not is_admin(update.effective_user.id) or not context.args: return
-    msg_text = " ".join(context.args)
-    users = load_users()
-    for uid in users:
-        try: await context.bot.send_message(uid, f"📢 *BROADCAST*\n\n{msg_text}", parse_mode=ParseMode.MARKDOWN)
-        except: pass
-    await update.message.reply_text("✅ Broadcast Sent")
+async def verify(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    if await is_member(context.bot, q.from_user.id):
+        await q.answer("✅ Verified!", show_alert=True)
+        await q.message.delete()
+        await start(update, context)
+    else:
+        await q.answer("❌ Join all channels first!", show_alert=True)
 
 # =========================================================
-# MAIN
+# 🏁 MAIN
 # =========================================================
-
 def main():
-    if not BOT_TOKEN:
-        print("❌ BOT_TOKEN NOT FOUND")
-        return
-
     app = Application.builder().token(BOT_TOKEN).build()
-
+    
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("num", num))
-    app.add_handler(CommandHandler("stats", stats))
-    app.add_handler(CommandHandler("bcast", bcast))
+    app.add_handler(CommandHandler("num", num_search))
+    app.add_handler(CommandHandler("gst", gst_search))
+    app.add_handler(CommandHandler("rc", rc_search))
+    app.add_handler(CommandHandler("maintain", maintain))
     app.add_handler(CallbackQueryHandler(verify, pattern="^verify$"))
-
-    print("✅ BOT STARTED SUCCESSFULLY")
+    
+    print("🚀 BOT STARTED SUCCESSFULLY")
     app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
