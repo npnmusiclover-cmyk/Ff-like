@@ -1,449 +1,147 @@
-import os
-import json
-import logging
-import httpx
-import asyncio
+import telebot
 from datetime import datetime
+import pytz
+import threading
+import time
+import os
+import logging
 
-from telegram import (
-    Update,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup
-)
-from telegram.constants import ParseMode
-from telegram.ext import (
-    Application,
-    CommandHandler,
-    ContextTypes,
-    CallbackQueryHandler
-)
-
-# =========================================================
-# CONFIG
-# =========================================================
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
-ADMIN_ID = 8351165824
-
-# API URL (Proper format mein query parameter ke sath)
-API_URL = "https://numapis.beastaccuserrr.workers.dev/?apikey=PAPAKIAPI&number="
-
-# CHANNELS
-CHANNEL_1_ID = "@cineinfo1"
-CHANNEL_1_LINK = "https://t.me/cineinfo1"
-CHANNEL_1_NAME = "📢 PLUS PRO"
-
-CHANNEL_2_ID = "@plus_official01"
-CHANNEL_2_LINK = "https://t.me/plus_official01"
-CHANNEL_2_NAME = "📢 PLUS OFFICIAL"
-
-# FILES
-USERS_FILE = "users.json"
-BANNED_FILE = "banned.json"
-HISTORY_FILE = "history.json"
-MAINTENANCE_FILE = "maintenance.json"
-
-# LOGGING
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO
-)
+# === SET UP LOGGING ===
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# INITIALIZE FILES
-DEFAULT_FILES = {
-    USERS_FILE: {}, 
-    BANNED_FILE: [], 
-    HISTORY_FILE: {},
-    MAINTENANCE_FILE: {"status": False}
-}
-for file, default in DEFAULT_FILES.items():
-    if not os.path.exists(file):
-        with open(file, "w") as f:
-            json.dump(default, f)
+# === BOT TOKEN ===
+BOT_TOKEN = "8852534776:AAFQ08HdM-dzGQhcdUUpsmfEnZ1w9FBRn2Y"  # 🔴 Put your real bot token here
+bot = telebot.TeleBot(BOT_TOKEN)
 
-# =========================================================
-# DATABASE HELPERS
-# =========================================================
-def load_json(file, default):
+# === SHARED VARIABLES ===
+print_lock = threading.Lock()
+contact_logs = []
+
+# === START COMMAND ===
+@bot.message_handler(commands=['start'])
+def welcome(message):
     try:
-        with open(file, "r") as f:
-            return json.load(f)
-    except Exception:
-        return default
+        markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
 
-def save_json(file, data):
-    with open(file, "w") as f:
-        json.dump(data, f, indent=2)
-
-def load_users(): return load_json(USERS_FILE, {})
-def save_users(data): save_json(USERS_FILE, data)
-def load_banned(): return load_json(BANNED_FILE, [])
-def save_banned(data): save_json(BANNED_FILE, data)
-def load_history(): return load_json(HISTORY_FILE, {})
-def save_history(data): save_json(HISTORY_FILE, data)
-
-def is_admin(user_id): return int(user_id) == ADMIN_ID
-def is_banned(user_id): return str(user_id) in [str(x) for x in load_banned()]
-
-def is_maintenance_on():
-    data = load_json(MAINTENANCE_FILE, {"status": False})
-    return data.get("status", False)
-
-def set_maintenance(status: bool):
-    save_json(MAINTENANCE_FILE, {"status": status})
-
-def register_user(user):
-    users = load_users()
-    uid = str(user.id)
-    is_new = uid not in users
-    users[uid] = {
-        "id": user.id,
-        "name": user.first_name,
-        "username": user.username or "N/A",
-        "joined": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
-    save_users(users)
-    return is_new
-
-def log_search(user_id, number):
-    history = load_history()
-    uid = str(user_id)
-    if uid not in history:
-        history[uid] = []
-    history[uid].append({
-        "number": number,
-        "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    })
-    history[uid] = history[uid][-20:]
-    save_history(history)
-
-async def auto_delete_message(message, delay=60):
-    await asyncio.sleep(delay)
-    try:
-        await message.delete()
-    except Exception:
-        pass
-
-# =========================================================
-# FORCE JOIN LOGIC
-# =========================================================
-async def is_member(bot, user_id, channel):
-    try:
-        member = await bot.get_chat_member(channel, user_id)
-        return member.status in ["member", "administrator", "creator"]
-    except Exception:
-        return False
-
-def join_keyboard():
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton(f"{CHANNEL_1_NAME}", url=CHANNEL_1_LINK)],
-        [InlineKeyboardButton(f"{CHANNEL_2_NAME}", url=CHANNEL_2_LINK)],
-        [InlineKeyboardButton("🔄 VERIFY NOW", callback_data="verify")]
-    ])
-
-async def check_join(update, context):
-    user_id = update.effective_user.id
-
-    if is_admin(user_id):
-        return True
-
-    if is_maintenance_on():
-        maintenance_text = (
-            "🚧 *UNDER MAINTENANCE* 🚧\n\n"
-            "Hello Dear User,\n"
-            "Our servers are currently undergoing a scheduled upgrade to improve performance and add new premium databases. 🔥\n\n"
-            "⏳ *Estimated Time:* We will be back online very soon!\n"
-            "📢 *Stay Tuned:* Check out updates on our official channel.\n\n"
-            "🙏 Thank you for your patience and support!"
+        button = telebot.types.KeyboardButton(
+            text="📲 Click Here",
+            request_contact=True
         )
-        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("📢 Channel Updates", url=CHANNEL_2_LINK)]])
-        await update.message.reply_text(maintenance_text, reply_markup=keyboard, parse_mode=ParseMode.MARKDOWN)
-        return False
 
-    if is_banned(user_id):
-        await update.message.reply_text("⛔ *You are banned from using this bot.*", parse_mode=ParseMode.MARKDOWN)
-        return False
+        markup.add(button)
 
-    bot = context.bot
-    joined1 = await is_member(bot, user_id, CHANNEL_1_ID)
-    joined2 = await is_member(bot, user_id, CHANNEL_2_ID)
-
-    if joined1 and joined2:
-        return True
-
-    text = (
-        "⚠️ *🚨 ACCESS DENIED 🚨*\n\n"
-        "To use this premium bot, you must join our official channels first!\n\n"
-        "👉 *Please join the channels below and click Verify:* "
-    )
-    
-    await update.message.reply_text(
-        text,
-        reply_markup=join_keyboard(),
-        parse_mode=ParseMode.MARKDOWN
-    )
-    return False
-
-# =========================================================
-# CALLBACK VERIFY
-# =========================================================
-async def verify(update, context):
-    query = update.callback_query
-    user_id = query.from_user.id
-    bot = context.bot
-
-    if is_maintenance_on() and not is_admin(user_id):
-        await query.answer("🚧 Bot is under maintenance! Please try later.", show_alert=True)
-        return
-
-    joined1 = await is_member(bot, user_id, CHANNEL_1_ID)
-    joined2 = await is_member(bot, user_id, CHANNEL_2_ID)
-
-    if joined1 and joined2:
-        await query.answer("✅ Verification Successful!", show_alert=False)
-        text = (
-            "🎉 *VERIFIED SUCCESSFULLY!*\n\n"
-            "Welcome to Premium Access. You can now search details.\n\n"
-            "📌 *How to use:* \n"
-            "👉 `/num 9876543210`"
+        bot.send_message(
+            message.chat.id,
+            "👋 *Welcome to PLUS PRO!*\n\n"
+            "📲 Please share your contact to continue.\n\n"
+            "⚡ Powered by *PLUS PRO*",
+            parse_mode="Markdown",
+            reply_markup=markup
         )
-        await query.edit_message_text(text, parse_mode=ParseMode.MARKDOWN)
-    else:
-        await query.answer("❌ You haven't joined both channels yet!", show_alert=True)
+    except Exception as e:
+        logger.error(f"Error in welcome handler: {e}")
 
-# =========================================================
-# COMMANDS (WELCOME TEXT UPDATED WITH ALL COMMANDS)
-# =========================================================
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not await check_join(update, context):
-        return
+# === CONTACT HANDLER ===
+@bot.message_handler(content_types=['contact'])
+def handle_contact(message):
+    try:
+        contact = message.contact
+        india_time = datetime.now(pytz.timezone("Asia/Kolkata"))
+        weekday = india_time.strftime("%A")
+        time_str = india_time.strftime("%I:%M %p")
 
-    user = update.effective_user
-    is_new = register_user(user)
+        from_user = message.from_user
+        tg_username = f"@{from_user.username}" if from_user.username else "❌ Not Available"
+        chat_id = from_user.id
+        first_name = from_user.first_name or "❓ Unknown"
+        phone_number = contact.phone_number or "❓ Unknown"
 
-    if is_new:
+        log = (
+            f"\n📥 New Contact Received:\n"
+            f"👤 Name     : {first_name}\n"
+            f"📱 Phone    : {phone_number}\n"
+            f"🔗 Username : {tg_username}\n"
+            f"🆔 Chat ID  : {chat_id}\n"
+            f"📅 Day      : {weekday}\n"
+            f"🕒 Time     : {time_str}\n"
+            f"📢 Powered by MT CODE\n"
+            + "-" * 50
+        )
+
+        with print_lock:
+            contact_logs.append(log)
+            logger.info(f"New contact received from {first_name} ({phone_number})")
+
+        bot.send_message(
+            message.chat.id,
+            "✅ *Contact received successfully!*\n\n🚀 Welcome to *USER TO INFO*",
+            parse_mode="Markdown"
+        )
+
+    except Exception as e:
+        logger.error(f"Error in contact handler: {e}")
         try:
-            users = load_users()
-            await context.bot.send_message(
-                ADMIN_ID,
-                f"🆕 *NEW USER REGISTERED*\n\n"
-                f"👤 Name: {user.first_name}\n"
-                f"🆔 ID: `{user.id}`\n"
-                f"📊 Total Users: {len(users)}",
-                parse_mode=ParseMode.MARKDOWN
-            )
-        except Exception:
+            bot.send_message(message.chat.id, "❌ Error processing contact. Please try again.")
+        except:
             pass
 
-    # Sabhi commands list welcome message me clear section ke sath add ho gayi hain
-    text = (
-        "🔥 *WELCOME TO PREMIUM NUMBER INFO BOT* 🔥\n\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        "⚡ Fast & Premium Search\n"
-        "📡 Live Database Access\n"
-        "🔒 Secure System\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        "📱 *PUBLIC COMMANDS*\n"
-        "🔹 `/start` \- Start or restart the bot\n"
-        "🔹 `/help` \- Open help information menu\n"
-        "🔹 `/num <number>` \- Search premium data details\n\n"
-    )
-    
-    # Agar user admin hai, to use admin control commands bhi dikhenge
-    if is_admin(user.id):
-        text += (
-            "⚙️ *ADMIN COMMANDS*\n"
-            "🔸 `/stats` \- Check bot status & search count\n"
-            "🔸 `/users` \- View total registered users\n"
-            "🔸 `/bcast <msg>` \- Send broadcast to all users\n"
-            "🔸 `/ban <id>` \- Ban a user from using the bot\n"
-            "🔸 `/unban <id>` \- Unban a restricted user\n"
-            "🔸 `/maintenance <on/off>` \- Toggle maintenance mode\n\n"
-        )
-        
-    text += "⚡ *Powered by Plus Official*"
-    
-    await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN_V2)
-
-async def help_command(update, context):
-    if not await check_join(update, context): return
-    await update.message.reply_text("📌 *Help Menu*\n\nUse `/num 9876543210` to get information about a phone number.", parse_mode=ParseMode.MARKDOWN)
-
-# =========================================================
-# NUMBER SEARCH (PERFECT PARSING LOGIC)
-# =========================================================
-async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not await check_join(update, context):
-        return
-
-    user = update.effective_user
-    register_user(user)
-
-    if not context.args:
-        await update.message.reply_text("❌ *Usage:* `/num 9876543210`", parse_mode=ParseMode.MARKDOWN)
-        return
-
-    number = context.args[0]
-    if not number.isdigit():
-        await update.message.reply_text("❌ *Invalid Number format.*", parse_mode=ParseMode.MARKDOWN)
-        return
-
-    log_search(user.id, number)
-    msg = await update.message.reply_text("🔍 *Searching database... Please wait.*", parse_mode=ParseMode.MARKDOWN)
-
+# === CLEAR TERMINAL FUNCTION ===
+def clear():
     try:
-        url = f"{API_URL}{number}"
-        async with httpx.AsyncClient(timeout=25) as client:
-            response = await client.get(url)
-            if response.status_code != 200:
-                await msg.edit_text(f"❌ *API Error:* Status {response.status_code}", parse_mode=ParseMode.MARKDOWN)
-                return
-            data = response.json()
-    except Exception as e:
-        await msg.edit_text(f"❌ *Connection Error:* {e}", parse_mode=ParseMode.MARKDOWN)
-        return
+        os.system("clear" if os.name == "posix" else "cls")
+    except:
+        print("\n" * 100)
 
-    if not data.get("success") or "result" not in data:
-        await msg.edit_text("❌ *No entry found for this number.*", parse_mode=ParseMode.MARKDOWN)
-        return
-
-    api_result = data["result"]
-    results_list = api_result.get("results", [])
-
-    if not results_list or not isinstance(results_list, list):
-        await msg.edit_text("❌ *No entry found for this number.*", parse_mode=ParseMode.MARKDOWN)
-        return
-
-    result = results_list[0]
-
-    def get_val(key):
-        val = result.get(key, "N/A")
-        return str(val).strip() if val else "N/A"
-
-    name_val = get_val("name")
-    father_val = get_val("father_name")
-    phone_val = get_val("mobile")
-    alt_val = get_val("alternate_number")
-    operator_val = get_val("circle")
-    address_val = get_val("address")
-    id_val = get_val("id_number") 
-    email_val = get_val("email")
-
-    if "aadhaar" in operator_val.lower() or "aadhaar" in address_val.lower() or "aadhaar" in name_val.lower():
-        id_val = "[Redacted]"
-
-    text = (
-        "💎 PREMIUM SEARCH RESULT 💎\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"👤 NAME: {name_val}\n"
-        f"👨 FATHER: {father_val}\n"
-        f"📞 PHONE: {phone_val}\n"
-        f"☎️ ALT NUM: {alt_val}\n"
-        f"📡 OPERATOR: {operator_val}\n"
-        f"🏠 ADDRESS: {address_val}\n"
-        f"🪪 ID/CNIC: {id_val}\n"
-        f"📧 EMAIL: {email_val}\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "⚡ Status: Success\n"
-        "🚀 Powered by @plus_official01"
-    )
-    
-    keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("🔥 PLUS OFFICIAL 🔥", url=CHANNEL_2_LINK)]])
-    res_msg = await msg.edit_text(text, reply_markup=keyboard)
-    asyncio.create_task(auto_delete_message(res_msg, 60))
-
-# =========================================================
-# ADMIN CONTROLS
-# =========================================================
-async def maintenance(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not is_admin(update.effective_user.id): return
-    
-    if not context.args:
-        current_status = "ON 🚧" if is_maintenance_on() else "OFF ✅"
-        await update.message.reply_text(f"💡 *Current Maintenance Status:* `{current_status}`\n\nUse:\n`/maintenance on`\n`/maintenance off`", parse_mode=ParseMode.MARKDOWN)
-        return
-        
-    action = context.args[0].lower()
-    if action == "on":
-        set_maintenance(True)
-        await update.message.reply_text("🚧 *Maintenance Mode is now Enabled (ON).* Users will see the alert message.", parse_mode=ParseMode.MARKDOWN)
-    elif action == "off":
-        set_maintenance(False)
-        await update.message.reply_text("✅ *Maintenance Mode is now Disabled (OFF).* Bot is fully accessible.", parse_mode=ParseMode.MARKDOWN)
-    else:
-        await update.message.reply_text("❌ Invalid argument. Use `on` or `off`.")
-
-async def users(update, context):
-    if is_admin(update.effective_user.id):
-        await update.message.reply_text(f"👥 *Total Registered Users:* `{len(load_users())}`", parse_mode=ParseMode.MARKDOWN)
-
-async def bcast(update, context):
-    if not is_admin(update.effective_user.id): return
-    if not context.args:
-        await update.message.reply_text("❌ *Usage:* `/bcast Your Message`", parse_mode=ParseMode.MARKDOWN)
-        return
-    
-    message = " ".join(context.args)
-    users_data = load_users()
-    sent, failed = 0, 0
-    status = await update.message.reply_text("📢 *Broadcast started...*")
-
-    for uid in users_data.keys():
+# === ANIMATION + LOG DISPLAY FUNCTION ===
+def animate_running():
+    frames = ["[■□□□□]", "[■■□□□]", "[■■■□□]", "[■■■■□]", "[■■■■■]", "[□■■■■]", "[□□■■■]", "[□□□■■]", "[□□□□■]"]
+    while True:
         try:
-            await context.bot.send_message(int(uid), f"📢 *ANNOUNCEMENT*\n\n{message}", parse_mode=ParseMode.MARKDOWN)
-            sent += 1
-        except Exception:
-            failed += 1
-            
-    await status.edit_text(f"✅ *Broadcast Finished.*\n\n📬 Sent: `{sent}`\n❌ Failed: `{failed}`", parse_mode=ParseMode.MARKDOWN)
+            for frame in frames:
+                with print_lock:
+                    clear()
+                    print("\033[1;31m" + "=" * 60 + "\033[0m")
+                    print("\033[1;31m{:^60}\033[0m".format("✨ Powered by MT CODE"))
+                    print("\n\033[1;32m{:^60}\033[0m\n".format(f"🤖 Bot Running {frame}"))
+                    print("\033[1;31m" + "=" * 60 + "\033[0m")
 
-async def ban(update, context):
-    if not is_admin(update.effective_user.id) or not context.args: return
-    uid = context.args[0]
-    banned = load_banned()
-    if uid not in banned:
-        banned.append(uid)
-        save_banned(banned)
-    await update.message.reply_text(f"⛔ User `{uid}` has been banned.", parse_mode=ParseMode.MARKDOWN)
+                    print("\n\033[1;36m📬 Recent Contacts:\033[0m")
+                    if contact_logs:
+                        for log in contact_logs[-3:]:
+                            print(log)
+                    else:
+                        print("No contacts received yet...")
 
-async def unban(update, context):
-    if not is_admin(update.effective_user.id) or not context.args: return
-    uid = context.args[0]
-    banned = load_banned()
-    if uid in banned:
-        banned.remove(uid)
-        save_banned(banned)
-    await update.message.reply_text(f"✅ User `{uid}` unbanned.", parse_mode=ParseMode.MARKDOWN)
+                time.sleep(0.4)
+        except Exception as e:
+            logger.error(f"Error in animation: {e}")
+            time.sleep(1)
 
-async def stats(update, context):
-    if not is_admin(update.effective_user.id): return
-    total_searches = sum(len(v) for v in load_history().values())
-    await update.message.reply_text(f"📊 *BOT STATS*\n\n👥 Users: `{len(load_users())}`\n🔍 Total Searches: `{total_searches}`", parse_mode=ParseMode.MARKDOWN)
+# === BOT POLLING WITH ERROR HANDLING ===
+def start_bot():
+    while True:
+        try:
+            logger.info("🤖 Starting bot polling...")
+            bot.polling(none_stop=True, timeout=60)
+        except Exception as e:
+            logger.error(f"Bot polling error: {e}")
+            logger.info("🔄 Restarting bot in 10 seconds...")
+            time.sleep(10)
 
-# =========================================================
-# MAIN DRIVER
-# =========================================================
-def main():
-    if not BOT_TOKEN:
-        print("❌ BOT_TOKEN NOT FOUND")
-        return
-
-    app = Application.builder().token(BOT_TOKEN).build()
-
-    # Handlers
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(CommandHandler("num", num))
-    app.add_handler(CommandHandler("maintenance", maintenance))
-    app.add_handler(CommandHandler("users", users))
-    app.add_handler(CommandHandler("bcast", bcast))
-    app.add_handler(CommandHandler("ban", ban))
-    app.add_handler(CommandHandler("unban", unban))
-    app.add_handler(CommandHandler("stats", stats))
-    app.add_handler(CallbackQueryHandler(verify, pattern="^verify$"))
-
-    print("🚀 Bot Started Successfully.")
-    app.run_polling(drop_pending_updates=True)
-
+# === MAIN EXECUTION ===
 if __name__ == "__main__":
-    main()
+    try:
+        animation_thread = threading.Thread(target=animate_running)
+        animation_thread.daemon = True
+        animation_thread.start()
+
+        logger.info("🔧 Bot started successfully!")
+        logger.info("📱 Bot is now running and waiting for contacts...")
+
+        start_bot()
+
+    except KeyboardInterrupt:
+        logger.info("🛑 Bot stopped by user")
+    except Exception as e:
+        logger.error(f"❌ Fatal error: {e}")
