@@ -25,7 +25,7 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN")
 ADMIN_ID = 8351165824
 
 # API URL (Proper format mein query parameter ke sath)
-API_URL = "https://numapis.beastaccuserrr.workers.dev/?apikey=PAPAKIAPI&number="
+API_URL = "https://numinfo.eu.cc/api/check?apikey=starlegendapi&number="
 
 # CHANNELS
 CHANNEL_1_ID = "@cineinfo1"
