@@ -3,6 +3,7 @@ import json
 import logging
 import httpx
 import asyncio
+import re
 from datetime import datetime
 
 from telegram import (
@@ -24,7 +25,7 @@ from telegram.ext import (
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 ADMIN_ID = 8351165824
 
-# NEW API URL (Updated as requested)
+# NEW WORKING API URL
 API_URL = "https://numinfo.eu.cc/api/check?apikey=starlegendapi&number="
 
 # CHANNELS
@@ -212,7 +213,7 @@ async def verify(update, context):
         await query.answer("❌ You haven't joined both channels yet!", show_alert=True)
 
 # =========================================================
-# NEW PREMIUM WELCOME TEXT WITH ALL COMMANDS
+# NEW AESTHETIC WELCOME TEXT
 # =========================================================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_join(update, context):
@@ -235,7 +236,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception:
             pass
 
-    # New Premium Aesthetic Welcome Layout
     text = (
         "⚡ *WELCOME TO PREMIUM NUMBER INFO BOT* ⚡\n"
         "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -268,7 +268,7 @@ async def help_command(update, context):
     await update.message.reply_text("📌 *Help Menu*\n\nUse `/num 9876543210` to get information about a phone number.", parse_mode=ParseMode.MARKDOWN)
 
 # =========================================================
-# NUMBER SEARCH (UPDATED PARSING LOGIC FOR NEW JSON)
+# ADVANCED UN-KILLABLE NUMBER SEARCH PARSER
 # =========================================================
 async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_join(update, context):
@@ -293,44 +293,71 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
         url = f"{API_URL}{number}"
         async with httpx.AsyncClient(timeout=25) as client:
             response = await client.get(url)
-            
-            # Status 500 hone par bhi agar body me JSON data aa raha hai toh ignore nahi hoga
-            try:
-                data = response.json()
-            except Exception:
-                data = None
-
-            if not data:
-                await msg.edit_text(f"❌ *API Error:* Status {response.status_code}", parse_mode=ParseMode.MARKDOWN)
-                return
-                
+            raw_text = response.text
     except Exception as e:
         await msg.edit_text(f"❌ *Connection Error:* {e}", parse_mode=ParseMode.MARKDOWN)
         return
 
-    # Check mapping according to the new structure {"0": {...}}
-    if "0" not in data:
-        await msg.edit_text("❌ *No entry found for this number.*", parse_mode=ParseMode.MARKDOWN)
-        return
+    # Phase 1: Try Standard JSON Parsing & Auto-fix formatting errors
+    data = None
+    try:
+        data = response.json()
+    except Exception:
+        try:
+            fixed_text = raw_text.strip()
+            if not fixed_text.startswith("{"):
+                fixed_text = "{" + fixed_text
+            data = json.loads(fixed_text)
+        except Exception:
+            data = None
 
-    result = data["0"]
+    # Variable Definitions with default fallback
+    name_val = father_val = phone_val = alt_val = operator_val = address_val = id_val = email_val = "N/A"
 
-    # Helper function to handle null or empty values gracefully
-    def get_val(key):
-        val = result.get(key, "N/A")
-        if val is None or str(val).strip().lower() == "null" or str(val).strip() == "":
+    # Phase 2: If JSON structure parsed successfully
+    if data and "0" in data:
+        result = data["0"]
+        def get_val(key):
+            val = result.get(key, "N/A")
+            if val is None or str(val).strip().lower() == "null" or str(val).strip() == "":
+                return "N/A"
+            return str(val).strip()
+
+        name_val = get_val("name")
+        father_val = get_val("father name")
+        phone_val = get_val("mobile")
+        alt_val = get_val("alternative mobile")
+        operator_val = get_val("circle/sim")
+        address_val = get_val("address")
+        id_val = get_val("id number")
+        email_val = get_val("mail")
+
+    # Phase 3: Ultimate Fallback (Regex Extract) if Server responds with completely broken JSON
+    else:
+        def extract_field(text, field_name):
+            pattern = rf'"{field_name}"\s*:\s*(?:"([^"]*)"|([^,\s}}]+))'
+            match = re.search(pattern, text)
+            if match:
+                val = match.group(1) if match.group(1) is not None else match.group(2)
+                if val is None or val.strip().lower() in ["null", "n/a", ""]:
+                    return "N/A"
+                return val.strip()
             return "N/A"
-        return str(val).strip()
 
-    # Exact key mapping from the new API structure
-    name_val = get_val("name")
-    father_val = get_val("father name")
-    phone_val = get_val("mobile")
-    alt_val = get_val("alternative mobile")
-    operator_val = get_val("circle/sim")
-    address_val = get_val("address")
-    id_val = get_val("id number")
-    email_val = get_val("mail")
+        # Check if the text contains some data signatures
+        if "name" in raw_text or "mobile" in raw_text:
+            name_val = extract_field(raw_text, "name")
+            father_val = extract_field(raw_text, "father name")
+            phone_val = extract_field(raw_text, "mobile")
+            alt_val = extract_field(raw_text, "alternative mobile")
+            operator_val = extract_field(raw_text, "circle/sim")
+            address_val = extract_field(raw_text, "address")
+            id_val = extract_field(raw_text, "id number")
+            email_val = extract_field(raw_text, "mail")
+        else:
+            # Genuine Error when no keywords are present at all
+            await msg.edit_text(f"❌ *API Server Error (No Data Found).* Status: {response.status_code}", parse_mode=ParseMode.MARKDOWN)
+            return
 
     # Security Filter Check
     if "aadhaar" in operator_val.lower() or "aadhaar" in address_val.lower() or "aadhaar" in name_val.lower():
