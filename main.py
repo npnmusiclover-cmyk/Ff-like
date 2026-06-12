@@ -1,7 +1,3 @@
-Maine aapki naye API URL ko code me update kar diya hai aur saath hi naye JSON structure ("0" key ke andar ka data) ko perfectly map kar diya hai.
-Ab agar API server kabhi internal issue ki wajah se status code 500 bhi dikhayega, tab bhi bot crash nahi hoga aur agar response me data maujood hai to use extract karke dikha dega. Welcome text ko bhi ekdum premium aur clear layout ke sath configure kar diya hai.
-### Updated Complete Python Code
-```python
 import os
 import json
 import logging
