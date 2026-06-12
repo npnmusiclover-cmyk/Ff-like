@@ -1,7 +1,3 @@
-Aapke code me maine naye API response format ke hisab se keys ko update kar diya hai aur error handling ko aur behtar banaya hai. Agar aapka API server **Status 500** bhi de raha hoga, tab bhi agar usme JSON data maujood hai, to bot use successfully parse karke dikha dega.
-Saath hi, /start command ka **Welcome Text** ekdum professional, premium look aur clean layout ke sath sabhi commands ko include karke update kar diya hai.
-Yaha aapka updated complete code hai:
-```python
 import os
 import json
 import logging
