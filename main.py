@@ -25,8 +25,8 @@ from telegram.ext import (
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 ADMIN_ID = 8351165824
 
-# NEW WORKING API URL
-API_URL = "API"
+# API URL
+API_URL = "https://numinfo.eu.cc/api/check?apikey=starlegendapi&number="
 
 # CHANNELS
 CHANNEL_1_ID = "@cineinfo1"
@@ -152,10 +152,10 @@ async def check_join(update, context):
         maintenance_text = (
             "🚧 *UNDER MAINTENANCE* 🚧\n\n"
             "Hello Dear User,\n"
-            "Our servers are currently undergoing a scheduled upgrade to improve performance and add new premium databases. 🔥\n\n"
+            "Our servers are currently undergoing a scheduled upgrade to improve performance.\n\n"
             "⏳ *Estimated Time:* We will be back online very soon!\n"
             "📢 *Stay Tuned:* Check out updates on our official channel.\n\n"
-            "🙏 Thank you for your patience and support!"
+            "🙏 Thank you for your patience!"
         )
         keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("📢 Channel Updates", url=CHANNEL_2_LINK)]])
         await update.message.reply_text(maintenance_text, reply_markup=keyboard, parse_mode=ParseMode.MARKDOWN)
@@ -213,7 +213,7 @@ async def verify(update, context):
         await query.answer("❌ You haven't joined both channels yet!", show_alert=True)
 
 # =========================================================
-# NEW AESTHETIC WELCOME TEXT
+# WELCOME INTERFACE
 # =========================================================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_join(update, context):
@@ -268,7 +268,7 @@ async def help_command(update, context):
     await update.message.reply_text("📌 *Help Menu*\n\nUse `/num 9876543210` to get information about a phone number.", parse_mode=ParseMode.MARKDOWN)
 
 # =========================================================
-# ADVANCED UN-KILLABLE NUMBER SEARCH PARSER
+# ADVANCED NUMBER SEARCH PARSER (ULTIMATE FIX)
 # =========================================================
 async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_join(update, context):
@@ -289,16 +289,27 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
     log_search(user.id, number)
     msg = await update.message.reply_text("🔍 *Searching database... Please wait.*", parse_mode=ParseMode.MARKDOWN)
 
+    # 1. BEAUTIFUL & CLEAN CONNECTION ERROR FRAME
     try:
         url = f"{API_URL}{number}"
-        async with httpx.AsyncClient(timeout=25) as client:
+        async with httpx.AsyncClient(timeout=15) as client:
             response = await client.get(url)
             raw_text = response.text
-    except Exception as e:
-        await msg.edit_text(f"❌ *Connection Error:* {e}", parse_mode=ParseMode.MARKDOWN)
+    except Exception:
+        error_text = (
+            "⚠️ *CONNECTION SLOW / SERVER LAG* ⚠️\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "🤖 *Status:* Request Timeout\n\n"
+            "👉 Server response delayed ya network slow hai.\n"
+            "Kripya kuch der baad fir se try karein! ✨\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "🚀 *Powered by @plus_official01*"
+        )
+        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("🔄 Try Again Later", callback_data="verify")]])
+        await msg.edit_text(error_text, reply_markup=keyboard, parse_mode=ParseMode.MARKDOWN)
         return
 
-    # Phase 1: Try Standard JSON Parsing & Auto-fix formatting errors
+    # Phase 1: Try Standard JSON Parsing
     data = None
     try:
         data = response.json()
@@ -311,15 +322,14 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception:
             data = None
 
-    # Variable Definitions with default fallback
     name_val = father_val = phone_val = alt_val = operator_val = address_val = id_val = email_val = "N/A"
 
-    # Phase 2: If JSON structure parsed successfully
+    # Phase 2: Extracting Values via JSON
     if data and "0" in data:
         result = data["0"]
         def get_val(key):
             val = result.get(key, "N/A")
-            if val is None or str(val).strip().lower() == "null" or str(val).strip() == "":
+            if val is None or str(val).strip().lower() in ["null", "n/a", ""]:
                 return "N/A"
             return str(val).strip()
 
@@ -332,7 +342,7 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
         id_val = get_val("id number")
         email_val = get_val("mail")
 
-    # Phase 3: Ultimate Fallback (Regex Extract) if Server responds with completely broken JSON
+    # Phase 3: Extracting Values via Regex Regex Fallback
     else:
         def extract_field(text, field_name):
             pattern = rf'"{field_name}"\s*:\s*(?:"([^"]*)"|([^,\s}}]+))'
@@ -344,7 +354,6 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return val.strip()
             return "N/A"
 
-        # Check if the text contains some data signatures
         if "name" in raw_text or "mobile" in raw_text:
             name_val = extract_field(raw_text, "name")
             father_val = extract_field(raw_text, "father name")
@@ -354,15 +363,27 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
             address_val = extract_field(raw_text, "address")
             id_val = extract_field(raw_text, "id number")
             email_val = extract_field(raw_text, "mail")
-        else:
-            # Genuine Error when no keywords are present at all
-            await msg.edit_text(f"❌ *API Server Error (No Data Found).* Status: {response.status_code}", parse_mode=ParseMode.MARKDOWN)
-            return
+
+    # 2. BEAUTIFUL 'NUMBER DETAILS NOT FOUND' INTERCEPTOR
+    if name_val == "N/A" and father_val == "N/A" and phone_val == "N/A":
+        not_found_text = (
+            "❌ *NUMBER DETAILS NOT FOUND* ❌\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "🔍 *Searched:* `{}`\n\n"
+            "Afsos! Is number ka koi bhi data hamare premium database me nahi mila.\n"
+            "Kripya ek baar number check karke dobara koshish karein. 👍\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "🚀 *Powered by @plus_official01*"
+        ).format(number)
+        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("🔥 PLUS OFFICIAL 🔥", url=CHANNEL_2_LINK)]])
+        await msg.edit_text(not_found_text, reply_markup=keyboard, parse_mode=ParseMode.MARKDOWN)
+        return
 
     # Security Filter Check
     if "aadhaar" in operator_val.lower() or "aadhaar" in address_val.lower() or "aadhaar" in name_val.lower():
         id_val = "[Redacted]"
 
+    # Main Premium Success Template
     text = (
         "💎 *PREMIUM SEARCH RESULT* 💎\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -397,12 +418,10 @@ async def maintenance(update: Update, context: ContextTypes.DEFAULT_TYPE):
     action = context.args[0].lower()
     if action == "on":
         set_maintenance(True)
-        await update.message.reply_text("🚧 *Maintenance Mode is now Enabled (ON).* Users will see the alert message.", parse_mode=ParseMode.MARKDOWN)
+        await update.message.reply_text("🚧 *Maintenance Mode Enabled (ON).* ", parse_mode=ParseMode.MARKDOWN)
     elif action == "off":
         set_maintenance(False)
-        await update.message.reply_text("✅ *Maintenance Mode is now Disabled (OFF).* Bot is fully accessible.", parse_mode=ParseMode.MARKDOWN)
-    else:
-        await update.message.reply_text("❌ Invalid argument. Use `on` or `off`.")
+        await update.message.reply_text("✅ *Maintenance Mode Disabled (OFF).* ", parse_mode=ParseMode.MARKDOWN)
 
 async def users(update, context):
     if is_admin(update.effective_user.id):
@@ -426,7 +445,7 @@ async def bcast(update, context):
         except Exception:
             failed += 1
             
-    await status.edit_text(f"✅ *Broadcast Finished.*\n\n📬 Sent: `{sent}`\n❌ Failed: `{failed}`", parse_mode=ParseMode.MARKDOWN)
+    await status.edit_text(f"%EF%B3%8A *Broadcast Finished.*\n\n%F4%93%A3%92 Sent: `{sent}`\n❌ Failed: `{failed}`", parse_mode=ParseMode.MARKDOWN)
 
 async def ban(update, context):
     if not is_admin(update.effective_user.id) or not context.args: return
