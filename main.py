@@ -268,7 +268,7 @@ async def help_command(update, context):
     await update.message.reply_text("📌 *Help Menu*\n\nUse `/num 9876543210` to get information about a phone number.", parse_mode=ParseMode.MARKDOWN)
 
 # =========================================================
-# ADVANCED NUMBER SEARCH PARSER (ULTIMATE FIX)
+# ADVANCED NUMBER SEARCH PARSER (FIXED ERROR INTERCEPTOR)
 # =========================================================
 async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_join(update, context):
@@ -278,7 +278,7 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
     register_user(user)
 
     if not context.args:
-        await update.message.reply_text("❌ *Usage:* `/num 9876543210`", parse_mode=ParseMode.MARKDOWN)
+        await update.message.reply_text("❌ *Usage LIKE THIS :* `/num 9876543210`", parse_mode=ParseMode.MARKDOWN)
         return
 
     number = context.args[0]
@@ -289,7 +289,7 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
     log_search(user.id, number)
     msg = await update.message.reply_text("🔍 *Searching database... Please wait.*", parse_mode=ParseMode.MARKDOWN)
 
-    # 1. BEAUTIFUL & CLEAN CONNECTION ERROR FRAME
+    # 1. PREMIUM & CLEAN CONNECTION ERROR TEXT
     try:
         url = f"{API_URL}{number}"
         async with httpx.AsyncClient(timeout=15) as client:
@@ -300,13 +300,12 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "⚠️ *CONNECTION SLOW / SERVER LAG* ⚠️\n"
             "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
             "🤖 *Status:* Request Timeout\n\n"
-            "👉 Server response delayed ya network slow hai.\n"
-            "Kripya kuch der baad fir se try karein! ✨\n"
+            "👉 Server response delayed hai ya aapka network slow hai.\n"
+            "Kripya kuch der baad fir se koshish karein! ⏳\n"
             "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
             "🚀 *Powered by @plus_official01*"
         )
-        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("🔄 Try Again Later", callback_data="verify")]])
-        await msg.edit_text(error_text, reply_markup=keyboard, parse_mode=ParseMode.MARKDOWN)
+        await msg.edit_text(error_text, parse_mode=ParseMode.MARKDOWN)
         return
 
     # Phase 1: Try Standard JSON Parsing
@@ -322,9 +321,24 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception:
             data = None
 
+    # 2. INTERCEPT EXPLICIT ERROR OR "NO DATA FOUND" FROM API
+    if "no data found" in raw_text.lower() or (data and str(data.get("status")).lower() == "error"):
+        not_found_text = (
+            "❌ *NUMBER DETAILS NOT FOUND* ❌\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "🔍 *Searched:* `{}`\n\n"
+            "Afsos! Is number ka koi bhi data hamare premium database me nahi mila.\n"
+            "Kripya ek baar number check karke dobara koshish karein. 👍\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "🚀 *Powered by @plus_official01*"
+        ).format(number)
+        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("🔥 PLUS OFFICIAL 🔥", url=CHANNEL_2_LINK)]])
+        await msg.edit_text(not_found_text, reply_markup=keyboard, parse_mode=ParseMode.MARKDOWN)
+        return
+
     name_val = father_val = phone_val = alt_val = operator_val = address_val = id_val = email_val = "N/A"
 
-    # Phase 2: Extracting Values via JSON
+    # Phase 2: Extracting Values via JSON (If Data Found Successfully)
     if data and "0" in data:
         result = data["0"]
         def get_val(key):
@@ -342,7 +356,7 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
         id_val = get_val("id number")
         email_val = get_val("mail")
 
-    # Phase 3: Extracting Values via Regex Regex Fallback
+    # Phase 3: Extracting Values via Regex Fallback
     else:
         def extract_field(text, field_name):
             pattern = rf'"{field_name}"\s*:\s*(?:"([^"]*)"|([^,\s}}]+))'
@@ -364,7 +378,7 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
             id_val = extract_field(raw_text, "id number")
             email_val = extract_field(raw_text, "mail")
 
-    # 2. BEAUTIFUL 'NUMBER DETAILS NOT FOUND' INTERCEPTOR
+    # 3. BACKUP INTERCEPTOR (Agar saare fields N/A reh jayein)
     if name_val == "N/A" and father_val == "N/A" and phone_val == "N/A":
         not_found_text = (
             "❌ *NUMBER DETAILS NOT FOUND* ❌\n"
@@ -445,7 +459,7 @@ async def bcast(update, context):
         except Exception:
             failed += 1
             
-    await status.edit_text(f"%EF%B3%8A *Broadcast Finished.*\n\n%F4%93%A3%92 Sent: `{sent}`\n❌ Failed: `{failed}`", parse_mode=ParseMode.MARKDOWN)
+    await status.edit_text(f"📢 *Broadcast Finished.*\n\n📬 Sent: `{sent}`\n❌ Failed: `{failed}`", parse_mode=ParseMode.MARKDOWN)
 
 async def ban(update, context):
     if not is_admin(update.effective_user.id) or not context.args: return
