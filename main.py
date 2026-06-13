@@ -26,7 +26,7 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN")
 ADMIN_ID = 8351165824
 
 # NEW WORKING API URL
-API_URL = "https://numinfo.eu.cc/api/check?apikey=starlegendapi&number="
+API_URL = "API"
 
 # CHANNELS
 CHANNEL_1_ID = "@cineinfo1"
