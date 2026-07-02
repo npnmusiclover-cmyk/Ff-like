@@ -16,7 +16,9 @@ from telegram.ext import (
     Application,
     CommandHandler,
     ContextTypes,
-    CallbackQueryHandler
+    CallbackQueryHandler,
+    MessageHandler,
+    filters
 )
 
 # =========================================================
@@ -257,6 +259,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "• `/ban <id>` — Restrict a user from using the bot\n"
             "• `/unban <id>` — Unban a restricted user\n"
             "• `/maintenance <on/off>` — Toggle maintenance mode\n\n"
+            "📢 *Quick Broadcast:* Just send any message, photo, or video to this bot, and it will be broadcasted to all users automatically."
         )
         
     text += "✨ *Powered by PLUS OFFICIAL*"
@@ -268,7 +271,7 @@ async def help_command(update, context):
     await update.message.reply_text("📌 *Help Menu*\n\nUse `/num 9876543210` to get information about a phone number.", parse_mode=ParseMode.MARKDOWN)
 
 # =========================================================
-# ADVANCED NUMBER SEARCH PARSER (FIXED ERROR INTERCEPTOR)
+# ADVANCED NUMBER SEARCH PARSER 
 # =========================================================
 async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_join(update, context):
@@ -289,7 +292,6 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
     log_search(user.id, number)
     msg = await update.message.reply_text("🔍 *Searching database... Please wait.*", parse_mode=ParseMode.MARKDOWN)
 
-    # 1. PREMIUM & CLEAN CONNECTION ERROR TEXT
     try:
         url = f"{API_URL}{number}"
         async with httpx.AsyncClient(timeout=15) as client:
@@ -308,7 +310,6 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await msg.edit_text(error_text, parse_mode=ParseMode.MARKDOWN)
         return
 
-    # Phase 1: Try Standard JSON Parsing
     data = None
     try:
         data = response.json()
@@ -321,7 +322,6 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception:
             data = None
 
-    # 2. INTERCEPT EXPLICIT ERROR OR "NO DATA FOUND" FROM API
     if "no data found" in raw_text.lower() or (data and str(data.get("status")).lower() == "error"):
         not_found_text = (
             "❌ *NUMBER DETAILS NOT FOUND* ❌\n"
@@ -338,7 +338,6 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     name_val = father_val = phone_val = alt_val = operator_val = address_val = id_val = email_val = "N/A"
 
-    # Phase 2: Extracting Values via JSON (If Data Found Successfully)
     if data and "0" in data:
         result = data["0"]
         def get_val(key):
@@ -356,7 +355,6 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
         id_val = get_val("id number")
         email_val = get_val("mail")
 
-    # Phase 3: Extracting Values via Regex Fallback
     else:
         def extract_field(text, field_name):
             pattern = rf'"{field_name}"\s*:\s*(?:"([^"]*)"|([^,\s}}]+))'
@@ -378,7 +376,6 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
             id_val = extract_field(raw_text, "id number")
             email_val = extract_field(raw_text, "mail")
 
-    # 3. BACKUP INTERCEPTOR (Agar saare fields N/A reh jayein)
     if name_val == "N/A" and father_val == "N/A" and phone_val == "N/A":
         not_found_text = (
             "❌ *NUMBER DETAILS NOT FOUND* ❌\n"
@@ -393,11 +390,9 @@ async def num(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await msg.edit_text(not_found_text, reply_markup=keyboard, parse_mode=ParseMode.MARKDOWN)
         return
 
-    # Security Filter Check
     if "aadhaar" in operator_val.lower() or "aadhaar" in address_val.lower() or "aadhaar" in name_val.lower():
         id_val = "[Redacted]"
 
-    # Main Premium Success Template
     text = (
         "💎 *PREMIUM SEARCH RESULT* 💎\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -456,6 +451,7 @@ async def bcast(update, context):
         try:
             await context.bot.send_message(int(uid), f"📢 *ANNOUNCEMENT*\n\n{message}", parse_mode=ParseMode.MARKDOWN)
             sent += 1
+            await asyncio.sleep(0.05)
         except Exception:
             failed += 1
             
@@ -485,6 +481,36 @@ async def stats(update, context):
     await update.message.reply_text(f"📊 *BOT STATS*\n\n👥 Users: `{len(load_users())}`\n🔍 Total Searches: `{total_searches}`", parse_mode=ParseMode.MARKDOWN)
 
 # =========================================================
+# AUTO BROADCAST & INVALID INPUT HANDLER
+# =========================================================
+async def handle_general_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    
+    # Agar Admin bina command ke koi message bhejta hai, to broadcast hoga (Images/Videos allowed)
+    if is_admin(user_id):
+        users_data = load_users()
+        sent, failed = 0, 0
+        status_msg = await update.message.reply_text("📢 *Auto-Broadcast started...*", parse_mode=ParseMode.MARKDOWN)
+
+        for uid_str in users_data.keys():
+            try:
+                await context.bot.copy_message(
+                    chat_id=int(uid_str),
+                    from_chat_id=update.message.chat_id,
+                    message_id=update.message.message_id
+                )
+                sent += 1
+                await asyncio.sleep(0.05) # Rate limit bachane ke liye
+            except Exception:
+                failed += 1
+
+        await status_msg.edit_text(f"✅ *Broadcast Completed!*\n\n📨 Sent: `{sent}`\n❌ Failed: `{failed}`", parse_mode=ParseMode.MARKDOWN)
+    
+    # Normal user agar kuch aur type karta hai
+    else:
+        await update.message.reply_text("❌ *Invalid Input!*\n\nPlease use commands. Example:\n👉 `/num 9876543210`", parse_mode=ParseMode.MARKDOWN)
+
+# =========================================================
 # MAIN DRIVER
 # =========================================================
 def main():
@@ -494,7 +520,7 @@ def main():
 
     app = Application.builder().token(BOT_TOKEN).build()
 
-    # Handlers
+    # Commands
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("num", num))
@@ -504,7 +530,12 @@ def main():
     app.add_handler(CommandHandler("ban", ban))
     app.add_handler(CommandHandler("unban", unban))
     app.add_handler(CommandHandler("stats", stats))
+    
+    # Callbacks
     app.add_handler(CallbackQueryHandler(verify, pattern="^verify$"))
+    
+    # General Messages (Auto-Broadcast / Unknown text)
+    app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, handle_general_message))
 
     print("🚀 Bot Started Successfully.")
     app.run_polling(drop_pending_updates=True)
