@@ -28,7 +28,7 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN")
 ADMIN_ID = 8351165824
 
 # API URL
-API_URL = "https://numinfo.eu.cc/api/check?apikey=starlegendapi&number="
+API_URL = "https://shuruuu-num-info.vercel.app/apis/num_info_v1?key=ADARSH_33&num="
 
 # CHANNELS
 CHANNEL_1_ID = "@cineinfo1"
